@@ -30,7 +30,9 @@ handler.setFormatter(formatter)
 
 
 def send_message(bot, message: str) -> None:
-    """Отправляет сообщение в чат."""
+    """
+    Отправляет сообщение в чат.
+    """
     if bot.send_message(TELEGRAM_CHAT_ID, message):
         logger.info('Сообщение в чат успешно отправлено.')
     else:
@@ -39,8 +41,10 @@ def send_message(bot, message: str) -> None:
 
 
 def get_api_answer(timestamp: int) -> dict:
-    """Делает запрос к эндпоинту API-сервиса и возвращает полученные данные в
-    виде словаря."""
+    """
+    Делает запрос к эндпоинту API-сервиса и возвращает полученные данные в
+    виде словаря.
+    """
     params: dict = {'from_date': timestamp}
 
     response = requests.get(ENDPOINT, headers=HEADERS, params=params,
@@ -62,8 +66,10 @@ def get_api_answer(timestamp: int) -> dict:
 
 
 def check_response(response: dict) -> list:
-    """Проверяет данные, полученные от API, на корректность и возвращает
-    список домашних работ."""
+    """
+    Проверяет данные, полученные от API, на корректность и возвращает
+    список домашних работ.
+    """
     if 'homeworks' not in response:
         logger.error(DataError.message)
         raise KeyError
@@ -80,9 +86,11 @@ def check_response(response: dict) -> list:
 
 
 def parse_status(homework: dict) -> str:
-    """Получает из словаря с данными домашнего задания его статус и возвращает
+    """
+    Получает из словаря с данными домашнего задания его статус и возвращает
     строку c названием задания и вердиктом, соответствующим статусу в словаре
-    HOMEWORK_STATUSES."""
+    HOMEWORK_STATUSES.
+    """
     if 'homework_name' not in homework or 'status' not in homework:
         logger.error(DataError.message)
         raise KeyError
@@ -102,7 +110,10 @@ def parse_status(homework: dict) -> str:
 
 
 def check_tokens() -> bool:
-    """Проверяет доступность констант из settings.py."""
+    """
+    Проверяет доступность констант из settings.py.
+    Возвращает булево значение по результатам проверки.
+    """
     if not all(
             (
              PRACTICUM_TOKEN,
