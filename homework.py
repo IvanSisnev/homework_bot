@@ -11,9 +11,11 @@ import time
 import requests
 import telegram
 
-from exceptions import *
-from settings import *
-
+from exceptions import (TokenError, BotMalfunction, APIAccessError,
+                        APIResponseError, DataError)
+from settings import (PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID,
+                      ENDPOINT, HEADERS, RETRY_TIME, HOMEWORK_STATUSES,
+                      ENCODING)
 
 # Создание логера
 logger = logging.getLogger(__name__)
@@ -38,6 +40,7 @@ def send_message(bot, message: str) -> None:
     else:
         logger.error(BotMalfunction.message)
     return None
+
 
 def get_api_answer(timestamp: int) -> dict:
     """
