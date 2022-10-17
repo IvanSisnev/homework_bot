@@ -30,9 +30,7 @@ handler.setFormatter(formatter)
 
 
 def send_message(bot, message: str) -> None:
-    """
-    Отправляет сообщение в чат.
-    """
+    """Отправляет сообщение в чат."""
     if bot.send_message(TELEGRAM_CHAT_ID, message):
         logger.info('Сообщение в чат успешно отправлено.')
     else:
@@ -42,6 +40,7 @@ def send_message(bot, message: str) -> None:
 
 def get_api_answer(timestamp: int) -> dict:
     """
+    Получает информацию от API.
     Делает запрос к эндпоинту API-сервиса и возвращает полученные данные в
     виде словаря.
     """
@@ -67,8 +66,8 @@ def get_api_answer(timestamp: int) -> dict:
 
 def check_response(response: dict) -> list:
     """
-    Проверяет данные, полученные от API, на корректность и возвращает
-    список домашних работ.
+    Обрабатывает данные, полученные от API.
+    Проверяет данные на корректность и возвращает список домашних работ.
     """
     if 'homeworks' not in response:
         logger.error(DataError.message)
@@ -87,6 +86,7 @@ def check_response(response: dict) -> list:
 
 def parse_status(homework: dict) -> str:
     """
+    Обрабатывает информацию по конкретному домашнему заданию.
     Получает из словаря с данными домашнего задания его статус и возвращает
     строку c названием задания и вердиктом, соответствующим статусу в словаре
     HOMEWORK_STATUSES.
@@ -114,15 +114,8 @@ def check_tokens() -> bool:
     Проверяет доступность констант из settings.py.
     Возвращает булево значение по результатам проверки.
     """
-    if not all(
-            (
-             PRACTICUM_TOKEN,
-             TELEGRAM_TOKEN,
-             TELEGRAM_CHAT_ID,
-             ENDPOINT,
-             HEADERS,
-            )
-    ) or not isinstance(HOMEWORK_STATUSES, dict) \
+    if not all((PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, ENDPOINT,
+                HEADERS,)) or not isinstance(HOMEWORK_STATUSES, dict) \
             or not all(key in HOMEWORK_STATUSES for key in (
             ('approved', 'reviewing', 'rejected'))):
         return False
