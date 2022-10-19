@@ -28,9 +28,7 @@ handler.setFormatter(formatter)
 
 
 def send_message(bot, message: str) -> None:
-    """
-    Отправляет сообщение в чат.
-    """
+    """Отправляет сообщение в чат."""
     try:
         if bot.send_message(TELEGRAM_CHAT_ID, message):
             logger.info('Сообщение в чат успешно отправлено.')
@@ -127,6 +125,7 @@ def parse_status(homework: dict) -> str:
 def check_tokens() -> bool:
     """
     Проверяет доступность констант из settings.py.
+    Возвращает булево значение.
     """
     if (not all((PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID,
                  ENDPOINT, HEADERS,))
