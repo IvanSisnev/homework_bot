@@ -30,8 +30,6 @@ handler.setFormatter(formatter)
 def send_message(bot, message: str) -> None:
     """
     Отправляет сообщение в чат.
-    :param bot: экземпляр класса telegram.Bot
-    :param message: текст сообщения
     """
     try:
         if bot.send_message(TELEGRAM_CHAT_ID, message):
@@ -45,10 +43,8 @@ def send_message(bot, message: str) -> None:
 
 def get_api_answer(timestamp: int) -> dict:
     """
-    Делает запрос к эндпоинту API-сервиса и возвращает полученные данные в
-    виде словаря.
-    :param timestamp: метка времени
-    :return response: словарь данными
+    Делает запрос к эндпоинту API-сервиса.
+    Возвращает полученные данные в виде словаря.
     """
     params: dict = {'from_date': timestamp}
 
@@ -85,10 +81,8 @@ def get_api_answer(timestamp: int) -> dict:
 
 def check_response(response: dict) -> list:
     """
-    Проверяет данные, полученные от API, на корректность и возвращает список
-    домашних работ.
-    :param response: словарь с данными
-    :return: hw_list: список домашних работ
+    Проверяет словарь данных, полученный от API, на корректность.
+    Возвращает список домашних работ.
     """
     if 'homeworks' not in response:
         logger.error(DataError.message)
@@ -107,11 +101,10 @@ def check_response(response: dict) -> list:
 
 def parse_status(homework: dict) -> str:
     """
-    Получает из словаря с данными домашнего задания его статус и возвращает
-    строку c названием задания и вердиктом, соответствующим статусу в словаре
+    Обрабатывает словарь с данными по домашнему заданию.
+    Получает из словаря с данными статус задания и возвращает строку c
+    названием задания и вердиктом, соответствующим статусу в словаре
     HOMEWORK_STATUSES.
-    :param homework: словарь с данными домашнего задания
-    :return verdict: строка с вердиктом
     """
     if 'homework_name' not in homework or 'status' not in homework:
         logger.error(DataError.message)
@@ -134,7 +127,6 @@ def parse_status(homework: dict) -> str:
 def check_tokens() -> bool:
     """
     Проверяет доступность констант из settings.py.
-    :return: bool
     """
     if (not all((PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID,
                  ENDPOINT, HEADERS,))
@@ -155,7 +147,6 @@ def main():
     полученные данные; в случае наличия обновлений получает строку с
     вердиктом и отправляет ее в чат.
     """
-
     # бот Телеграм
     bot = telegram.Bot(TELEGRAM_TOKEN)
 
