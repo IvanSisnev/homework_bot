@@ -7,22 +7,18 @@
 import logging
 import sys
 import time
+from http import HTTPStatus
 
 import requests
 import telegram
 
-from exceptions import (TokenError, BotMalfunction, APIAccessError,
-                        APIResponseError, DataError)
-from settings import (PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID,
-                      ENDPOINT, HEADERS, RETRY_TIME, HOMEWORK_STATUSES,
-                      ENCODING)
+from exceptions import *
+from settings import *
 
 # Создание логера
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler(sys.stdout)
-logger.addHandler(handler)
-handler = logging.FileHandler('log.txt', encoding=ENCODING)
 logger.addHandler(handler)
 formatter = logging.Formatter('%(asctime)s уровень %(levelname)s, функция %('
                               'funcName)s: %(message)s')
@@ -30,44 +26,67 @@ handler.setFormatter(formatter)
 
 
 def send_message(bot, message: str) -> None:
-    """Отправляет сообщение в чат."""
-    if bot.send_message(TELEGRAM_CHAT_ID, message):
-        logger.info('Сообщение в чат успешно отправлено.')
-    else:
+    """
+    Отправляет сообщение в чат.
+    :param bot: экземпляр класса telegram.Bot
+    :param message: текст сообщения
+    """
+    try:
+        if bot.send_message(TELEGRAM_CHAT_ID, message):
+            logger.info('Сообщение в чат успешно отправлено.')
+        else:
+            logger.error(BotMalfunction.message)
+    except BotMalfunction:
         logger.error(BotMalfunction.message)
     return None
 
 
 def get_api_answer(timestamp: int) -> dict:
     """
-    Получает информацию от API.
     Делает запрос к эндпоинту API-сервиса и возвращает полученные данные в
     виде словаря.
+    :param timestamp: метка времени
+    :return response: словарь данными
     """
     params: dict = {'from_date': timestamp}
 
-    response = requests.get(ENDPOINT, headers=HEADERS, params=params,
-                            timeout=10)
+    try:
+        response = requests.get(ENDPOINT, headers=HEADERS, params=params,
+                                timeout=10)
 
-    if response.status_code != 200:
+        if response.status_code != HTTPStatus.OK:
+            logger.error(APIAccessError.message)
+            raise APIAccessError
+
+        if not response:
+            logger.error(APIResponseError.message)
+            raise APIResponseError
+        
+        try:
+            response = response.json()
+        except APIResponseError:
+            logger.error(APIResponseError.message)
+            raise APIResponseError
+
+        response = dict(response)
+        if not isinstance(response, dict):
+            logger.error(APIResponseError.message)
+            raise APIResponseError
+
+        logger.info('Ответ от API получен. Словарь с данными передан '
+                    'дальше.')
+        return response
+    except APIAccessError:
         logger.error(APIAccessError.message)
-        raise APIAccessError
-
-    response = dict(response.json())
-
-    if not isinstance(response, dict):
-        logger.error(APIResponseError.message)
         raise APIResponseError
-
-    logger.info('Ответ от API получен. '
-                'Словарь с данными передан дальше.')
-    return response
 
 
 def check_response(response: dict) -> list:
     """
-    Обрабатывает данные, полученные от API.
-    Проверяет данные на корректность и возвращает список домашних работ.
+    Проверяет данные, полученные от API, на корректность и возвращает список
+    домашних работ.
+    :param response: словарь с данными
+    :return: hw_list: список домашних работ
     """
     if 'homeworks' not in response:
         logger.error(DataError.message)
@@ -86,10 +105,11 @@ def check_response(response: dict) -> list:
 
 def parse_status(homework: dict) -> str:
     """
-    Обрабатывает информацию по конкретному домашнему заданию.
     Получает из словаря с данными домашнего задания его статус и возвращает
     строку c названием задания и вердиктом, соответствующим статусу в словаре
     HOMEWORK_STATUSES.
+    :param homework: словарь с данными домашнего задания
+    :return verdict: строка с вердиктом
     """
     if 'homework_name' not in homework or 'status' not in homework:
         logger.error(DataError.message)
@@ -112,12 +132,15 @@ def parse_status(homework: dict) -> str:
 def check_tokens() -> bool:
     """
     Проверяет доступность констант из settings.py.
-    Возвращает булево значение по результатам проверки.
+    :return: bool
     """
-    if not all((PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, ENDPOINT,
-                HEADERS,)) or not isinstance(HOMEWORK_STATUSES, dict) \
-            or not all(key in HOMEWORK_STATUSES for key in (
-            ('approved', 'reviewing', 'rejected'))):
+    if (not all((PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID,
+                 ENDPOINT, HEADERS,))
+            or not isinstance(HOMEWORK_STATUSES, dict)
+            or not all(key in HOMEWORK_STATUSES for key in (('approved',
+                                                             'reviewing',
+                                                             'rejected',))
+                       )):
         return False
     logger.debug('Все токены и константы в порядке.')
     return True
@@ -130,17 +153,17 @@ def main():
     полученные данные; в случае наличия обновлений получает строку с
     вердиктом и отправляет ее в чат.
     """
+
     # бот Телеграм
     bot = telegram.Bot(TELEGRAM_TOKEN)
 
     # Проверка токенов и констант
     if not check_tokens():
         logger.critical(TokenError.message)
-        send_message(bot, TokenError.message)
         raise TokenError(TokenError.message)
 
     # Метка времени для запроса к API
-    timestamp = int(time.time())
+    timestamp = int(time.time()) - 86400
     # Переменная однократного сообщения об ошибке запроса к API
     notified = False
 
@@ -167,6 +190,7 @@ def main():
 
         except APIAccessError:
             logger.warning(APIAccessError.message)
+            # Проверка, было ли уже отправлено сообщение об ошибке
             if not notified:
                 send_message(bot, APIAccessError.message)
                 notified = True
