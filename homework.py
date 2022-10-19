@@ -12,8 +12,10 @@ from http import HTTPStatus
 import requests
 import telegram
 
-from exceptions import *
-from settings import *
+from exceptions import (TokenError, BotMalfunction, APIResponseError,
+                        APIAccessError, DataError)
+from settings import (PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID,
+                      ENDPOINT, HEADERS, RETRY_TIME, HOMEWORK_STATUSES)
 
 # Создание логера
 logger = logging.getLogger(__name__)
@@ -61,7 +63,7 @@ def get_api_answer(timestamp: int) -> dict:
         if not response:
             logger.error(APIResponseError.message)
             raise APIResponseError
-        
+
         try:
             response = response.json()
         except APIResponseError:
