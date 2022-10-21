@@ -50,31 +50,32 @@ def get_api_answer(timestamp: int) -> dict:
         response = requests.get(ENDPOINT, headers=HEADERS, params=params,
                                 timeout=10)
 
-        if response.status_code != HTTPStatus.OK:
-            logger.error(APIAccessError.message)
-            raise APIAccessError
-
-        if not response:
-            logger.error(APIResponseError.message)
-            raise APIResponseError
-
-        try:
-            response = response.json()
-        except APIResponseError:
-            logger.error(APIResponseError.message)
-            raise APIResponseError
-
-        response = dict(response)
-        if not isinstance(response, dict):
-            logger.error(APIResponseError.message)
-            raise APIResponseError
-
-        logger.info('Ответ от API получен. Словарь с данными передан '
-                    'дальше.')
-        return response
     except APIAccessError:
         logger.error(APIAccessError.message)
-        raise APIResponseError
+        raise APIAccessError(APIAccessError.message)
+
+    if response.status_code != HTTPStatus.OK:
+        logger.error(APIAccessError.message)
+        raise APIAccessError(APIAccessError.message)
+
+    if not response:
+        logger.error(APIResponseError.message)
+        raise APIResponseError(APIResponseError.message)
+
+    try:
+        response = response.json()
+    except APIResponseError:
+        logger.error(APIResponseError.message)
+        raise APIResponseError(APIResponseError.message)
+
+    response = dict(response)
+    if not isinstance(response, dict):
+        logger.error(APIResponseError.message)
+        raise APIResponseError(APIResponseError.message)
+
+    logger.info('Ответ от API получен. Словарь с данными передан '
+                'дальше.')
+    return response
 
 
 def check_response(response: dict) -> list:
@@ -84,13 +85,13 @@ def check_response(response: dict) -> list:
     """
     if 'homeworks' not in response:
         logger.error(DataError.message)
-        raise KeyError
+        raise KeyError(DataError.message)
 
     hw_list = response.get('homeworks')
 
     if not isinstance(hw_list, list):
         logger.error(DataError.message)
-        raise TypeError
+        raise TypeError(DataError.message)
 
     logger.info('Словарь с данными проверен. Список домашних заданий '
                 'передан дальше.')
@@ -106,14 +107,14 @@ def parse_status(homework: dict) -> str:
     """
     if 'homework_name' not in homework or 'status' not in homework:
         logger.error(DataError.message)
-        raise KeyError
+        raise KeyError(DataError.message)
 
     homework_name = homework.get('homework_name')
     homework_status = homework.get('status')
 
     if homework_status not in HOMEWORK_STATUSES:
         logger.error(DataError.message)
-        raise KeyError
+        raise KeyError(DataError.message)
 
     verdict = HOMEWORK_STATUSES.get(homework_status)
     logger.info('Обновленный статус домашней работы получен. Вердикт '
@@ -152,12 +153,13 @@ def main():
     # Проверка токенов и констант
     if not check_tokens():
         logger.critical(TokenError.message)
-        raise TokenError(TokenError.message)
+        send_message(bot, TokenError.message)
+        raise TokenError
 
     # Метка времени для запроса к API
     timestamp = int(time.time()) - 86400
-    # Переменная однократного сообщения об ошибке запроса к API
-    notified = False
+    # переменная для отслеживания повторяющихся ошибок
+    error_message = ''
 
     while True:
         try:
@@ -180,12 +182,11 @@ def main():
             else:
                 logger.debug('Новых статусов домашних заданий нет.')
 
-        except APIAccessError:
-            logger.warning(APIAccessError.message)
-            # Проверка, было ли уже отправлено сообщение об ошибке
-            if not notified:
-                send_message(bot, APIAccessError.message)
-                notified = True
+        except Exception as exception:
+            # Проверка, было ли уже отправлено сообщение об этой ошибке
+            if error_message != str(exception):
+                send_message(bot, str(exception))
+                error_message = str(exception)
 
         finally:
             time.sleep(RETRY_TIME or 600)
